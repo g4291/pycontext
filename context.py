@@ -17,7 +17,7 @@ class ContextCancelledError(Exception):
     """ cancel exception """
 
 class ContextTimeoutError(Exception):
-    """ cancel exception """
+    """ timeout exception """
 
 class SubscriberNotUnique(Exception):
     """ subscriber id not unique exception """
