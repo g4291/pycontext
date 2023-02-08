@@ -44,12 +44,10 @@ class AbstractContext(ABC):
         self._suppress = bool(suppress)
 
     def _kill(self, error: Type):
-        _logger.info(f"killing thread: {self._thread_id}")
+        _logger.debug(f"killing thread: {self._thread_id}")
         r = ctypes.pythonapi.PyThreadState_SetAsyncExc(ctypes.c_long(self._thread_id), ctypes.py_object(error))
-        if r == 0:
-            _logger.error("thread not found")
-        elif r > 1:
-            _logger.error("")
+        if r != 1:
+            _logger.error(f"error killing thread, {self._thread_id}")
 
     @abstractmethod
     def __enter__(self):
@@ -95,19 +93,22 @@ class ContextWithTimeout(AbstractContext):
         self._running = True
         self._timeout_thread = None
 
-    def _timeout_handler(self, timeout: float):
-        def f():
+    def _timer(self, timeout: float):
+
+        # timer fn
+        def timer():
             while self._running:
                 if time.time() > (self._ts + timeout):
                     self._kill(ContextTimeoutError)
                     break
 
-        self._timeout_thread = threading.Thread(target=f)
+        self._timeout_thread = threading.Thread(target=timer)
         self._timeout_thread.start()
 
     def __enter__(self):
         if self._timeout > 0:
-            self._timeout_handler(self._timeout)
+            self._timer(self._timeout)
+        return self
 
     def __exit__(self, exc_type, exc_val, traceback):
         # cleaning
